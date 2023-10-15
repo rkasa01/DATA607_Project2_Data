@@ -1,0 +1,61 @@
+---
+title: "DATA607_PROJECT2_2.3_RKASA"
+author: "Renida Kasa"
+date: "10/15/2023"
+output: html_document
+---
+
+# Project 2 - Data Transformation
+
+# The goal of this assignment is to give you practice in preparing different datasets for downstream analysis work. 
+
+Your task is to: 
+Choose any three of the “wide” datasets identified in the course Slack channel. (You may use your own dataset; please don’t use my Sample Post dataset, since that was used in your previous assignment!) For each of the three chosen datasets: 
+	• Create a .CSV file (or optionally, a MySQL database!) that includes all of the information included in the dataset. You’re encouraged to use a “wide” structure similar to how the information appears in the discussion item, so that you can practice tidying and transformations as described below. 
+	• Read the information from your .CSV file into R, and use tidyr and dplyr as needed to tidy and transform your data. [Most of your grade will be based on this step!] 
+	• Perform the analysis requested in the discussion item. 
+	• Your code should be in an R Markdown file, posted to rpubs.com, and should include narrative descriptions of your data cleanup work, analysis, and conclusions. 
+
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(lubridate)
+library(anytime)
+```
+
+## DATA SET 2 - Hotel Bookings
+
+This dataset contains information which compares booking information between a city hotel and a resort hotel.
+
+```{r}
+rawlink_hotel <- 'https://raw.githubusercontent.com/rkasa01/DATA607_Project2_Data/main/hotel_bookings.csv'
+hotel_data <- read.csv(rawlink_hotel)
+head(hotel_data)
+```
+
+
+When I was looking at this dataset, a question popped into my mind! I wanted to know what was the highest and lowest average daily rate. 
+
+To answer this question, I removed any cancelled reservations and I first tidied the data a bit like so:
+
+```{r}
+adr_hotel_data <- hotel_data %>%
+  filter(is_canceled > 0) %>%
+  select(country, hotel, babies, children, adults, adr)
+
+head(adr_hotel_data)
+```
+
+```{r}
+highest_adr <- adr_hotel_data %>%
+  summarize(highest_adr = max(adr, na.rm = TRUE))
+lowest_adr <- adr_hotel_data %>%
+  summarize(lowest_adr = min(adr, na.rm = TRUE))
+
+print(highest_adr)
+
+print(lowest_adr)
+```
+
+It looks like the highest average daily rate was $5400 and the lowest was $0 -- both of which are drastically different rates!

@@ -1,0 +1,85 @@
+---
+title: "DATA607_PROJECT2_1.3_RKASA"
+author: "Renida Kasa"
+date: "10/15/2023"
+output: html_document
+---
+
+# Project 2 - Data Transformation
+
+# The goal of this assignment is to give you practice in preparing different datasets for downstream analysis work. 
+
+Your task is to: 
+Choose any three of the “wide” datasets identified in the course Slack channel. (You may use your own dataset; please don’t use my Sample Post dataset, since that was used in your previous assignment!) For each of the three chosen datasets: 
+	• Create a .CSV file (or optionally, a MySQL database!) that includes all of the information included in the dataset. You’re encouraged to use a “wide” structure similar to how the information appears in the discussion item, so that you can practice tidying and transformations as described below. 
+	• Read the information from your .CSV file into R, and use tidyr and dplyr as needed to tidy and transform your data. [Most of your grade will be based on this step!] 
+	• Perform the analysis requested in the discussion item. 
+	• Your code should be in an R Markdown file, posted to rpubs.com, and should include narrative descriptions of your data cleanup work, analysis, and conclusions. 
+
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(lubridate)
+library(anytime)
+```
+
+## DATA SET 1 - Global Weather
+
+This dataset provides weather information daily starting from August 29, 2023, for capital cities around the world. It includes different features of the weather which reflect weather conditions globally. For example, wind direction, precipitation amount, pressure, humidity, and more. I will be tidying this data so that for each location I can see the temperature for October 14, 2023, in Fahrenheit, precipitation amount, percentage of cloud coverage, wind in miles per hour, humidity, and feels-like in Farenheit.
+
+```{r}
+rawlink_weather <- 'https://raw.githubusercontent.com/rkasa01/DATA607_Project2_Data/main/GlobalWeatherRepository.csv' 
+weather_data <- read.csv(rawlink_weather)
+head(weather_data)
+```
+Here is the dataset with the specific data which I am looking for:
+```{r}
+selected_weather_data <- weather_data %>%
+  select(country,location_name, temperature_fahrenheit, precip_in, cloud, wind_mph, humidity, feels_like_fahrenheit)
+
+head(selected_weather_data )
+```
+I then wanted to bring back the "last_updated" variable, to only view weather information corresponding to the last date of the recorded data: September 3rd, 2023. 
+```{r}
+sept_3_weather_data <- weather_data %>%
+  mutate(Date = as.Date(last_updated, format = "%Y-%m-%d")) %>% 
+  filter(Date == as.Date("2023-09-03")) 
+sept_3_weather_data <- sept_3_weather_data %>%
+  select(country, location_name, temperature_fahrenheit, feels_like_fahrenheit, precip_in, cloud, humidity, wind_mph, last_updated)
+
+head(sept_3_weather_data)
+```
+
+After that, I was curious and wanted to answer the following question: Which location experienced the highest, and lowest temperature on September 3rd, 2023?
+
+Here is the (further) tidied information which we would need to answer that question:
+
+```{r}
+sept_3_weather_data_temp <- sept_3_weather_data %>%
+  select(country, location_name, temperature_fahrenheit, last_updated)
+
+head(sept_3_weather_data_temp)
+```
+And here is how I found the highest and lowest temperature globally on this date:
+
+```{r}
+row_with_lowest_temp <- which.min(sept_3_weather_data_temp$temperature_fahrenheit)
+lowest_temp_location <- sept_3_weather_data_temp$location_name[row_with_lowest_temp]
+lowest_temp_country <- sept_3_weather_data_temp$country[row_with_lowest_temp]
+lowest_temp_value <- sept_3_weather_data_temp$temperature_fahrenheit[row_with_lowest_temp]
+row_with_highest_temp <- which.max(sept_3_weather_data_temp$temperature_fahrenheit)
+highest_temp_location <- sept_3_weather_data_temp$location_name[row_with_highest_temp]
+highest_temp_country <- sept_3_weather_data_temp$country[row_with_highest_temp]
+highest_temp_value <- sept_3_weather_data_temp$temperature_fahrenheit[row_with_highest_temp]
+
+cat("Location with the lowest temperature:", lowest_temp_location, "\n")
+cat("Country:", lowest_temp_country, "\n")
+cat("Temperature:", lowest_temp_value, "°F\n\n")
+
+cat("Location with the highest temperature:", highest_temp_location, "\n")
+cat("Country:", highest_temp_country, "\n")
+cat("Temperature:", highest_temp_value, "°F\n")
+```
+
+Here we can see that the lowest temperature globally recorded was in Andorra La Vell, Andorra, with a temperature of 45 °F, whereas the highest temperature was found in Carreria, Paraguay, with a temperature of 99.1 °F!

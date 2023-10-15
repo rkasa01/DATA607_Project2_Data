@@ -1,0 +1,79 @@
+---
+title: "DATA607_PROJECT2_3.3_RKASA"
+author: "Renida Kasa"
+date: "10/15/2023"
+output: html_document
+---
+# Data Transformation
+
+# The goal of this assignment is to give you practice in preparing different datasets for downstream analysis work. 
+
+Your task is to: 
+Choose any three of the “wide” datasets identified in the course Slack channel. (You may use your own dataset; please don’t use my Sample Post dataset, since that was used in your previous assignment!) For each of the three chosen datasets: 
+	• Create a .CSV file (or optionally, a MySQL database!) that includes all of the information included in the dataset. You’re encouraged to use a “wide” structure similar to how the information appears in the discussion item, so that you can practice tidying and transformations as described below. 
+	• Read the information from your .CSV file into R, and use tidyr and dplyr as needed to tidy and transform your data. [Most of your grade will be based on this step!] 
+	• Perform the analysis requested in the discussion item. 
+	• Your code should be in an R Markdown file, posted to rpubs.com, and should include narrative descriptions of your data cleanup work, analysis, and conclusions. 
+
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(lubridate)
+library(anytime)
+```
+
+
+## DATA SET 3 - Airbnb Property Rentals
+```{r}
+rawlink_airbnb_loc <- 'https://raw.githubusercontent.com/rkasa01/DATA607_Project2_Data/main/airbnb_location_info.csv'
+rawlink_airbnb_price<-'https://raw.githubusercontent.com/rkasa01/DATA607_Project2_Data/main/airbnb_listing_price.csv'
+hotel_prop_data<-read.csv('airbnb_property_info.csv')
+hotel_loc_data <- read.csv(rawlink_airbnb_loc)
+hotel_price_data <- read.csv(rawlink_airbnb_price)
+head(hotel_loc_data)
+head(hotel_price_data)
+head(hotel_prop_data)
+```
+
+First, I started out by combining the three datasets, since they are related to one another. It is convenient, in this case, to look at the datasets combined since we are looking at airbnb properties. This way, we can see listing ID and price, relative to the rooms, location, neighbourhood, and the duration of the stay. I can now tidy and transform this dataset!
+```{r}
+combined_hotel_data <- inner_join(hotel_loc_data, hotel_price_data, by = "listing_id")
+combined_hotel_data <- inner_join(combined_hotel_data, hotel_prop_data, by = "listing_id")
+head(combined_hotel_data)
+```
+I wanted to tidy this data further and look at the listing_id, host location, price, bedrooms,minimum nights stay, and amenities.
+
+```{r}
+tidied_hotel_data <- combined_hotel_data %>%
+  select(listing_id, host_location, price, bedrooms, minimum_nights, amenities)
+
+head(tidied_hotel_data)
+```
+
+For this dataset, I wanted to have some fun and decided to assume that I was planning a trip to Paris, France. I am looking for an affordable property with 1 bedroom and Wifi. Ideally, I would like to spend as little as possible, so I would like to see what is available for $65 or less. Additionally, I would like to book the property for a maximum of 14 days, meaning that I cannot book a room for more than a minimum of 13 nights. 
+
+```{r}
+print(tidied_hotel_data)
+affordable_properties_paris <- tidied_hotel_data %>%
+  filter(
+    host_location == "Paris, Ile-de-France, France",
+    price <= 65,
+    bedrooms == 1,
+    grepl("Wifi", amenities, ignore.case = TRUE), 
+    minimum_nights <= 13,
+  )
+
+head(affordable_properties_paris)
+```
+
+Wow, there are so many options to choose from! I would like to see the most affordable property. 
+
+```{r}
+affordable_properties_sorted <- affordable_properties_paris %>%
+  arrange(price)
+most_affordable_property <- affordable_properties_sorted[1, ]
+
+print(most_affordable_property)
+```
+Well, it looks like I'm going to Paris, France! I will be staying there for 14 days, or 13 nights, for $8 a night. I will have 1 bedroom, and Wifi is included!

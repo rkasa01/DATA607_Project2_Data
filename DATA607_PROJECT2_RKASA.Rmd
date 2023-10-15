@@ -1,0 +1,176 @@
+---
+title: "DATA607_PROJECT2_RKASA"
+author: "Renida Kasa"
+date: "10/15/2023"
+output: html_document
+---
+
+# Project 2 - Data Transformation
+
+# The goal of this assignment is to give you practice in preparing different datasets for downstream analysis work. 
+
+Your task is to: 
+Choose any three of the “wide” datasets identified in the course Slack channel. (You may use your own dataset; please don’t use my Sample Post dataset, since that was used in your previous assignment!) For each of the three chosen datasets: 
+	• Create a .CSV file (or optionally, a MySQL database!) that includes all of the information included in the dataset. You’re encouraged to use a “wide” structure similar to how the information appears in the discussion item, so that you can practice tidying and transformations as described below. 
+	• Read the information from your .CSV file into R, and use tidyr and dplyr as needed to tidy and transform your data. [Most of your grade will be based on this step!] 
+	• Perform the analysis requested in the discussion item. 
+	• Your code should be in an R Markdown file, posted to rpubs.com, and should include narrative descriptions of your data cleanup work, analysis, and conclusions. 
+
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(lubridate)
+library(anytime)
+```
+
+## DATA SET 1 - Global Weather
+
+This dataset provides weather information daily starting from August 29, 2023, for capital cities around the world. It includes different features of the weather which reflect weather conditions globally. For example, wind direction, precipitation amount, pressure, humidity, and more. I will be tidying this data so that for each location I can see the temperature for October 14, 2023, in Fahrenheit, precipitation amount, percentage of cloud coverage, wind in miles per hour, humidity, and feels-like in Farenheit.
+
+```{r}
+rawlink_weather <- 'https://raw.githubusercontent.com/rkasa01/DATA607_Project2_Data/main/GlobalWeatherRepository.csv' 
+weather_data <- read.csv(rawlink_weather)
+head(weather_data)
+```
+Here is the dataset with the specific data which I am looking for:
+```{r}
+selected_weather_data <- weather_data %>%
+  select(country,location_name, temperature_fahrenheit, precip_in, cloud, wind_mph, humidity, feels_like_fahrenheit)
+
+head(selected_weather_data )
+```
+I then wanted to bring back the "last_updated" variable, to only view weather information corresponding to the last date of the recorded data: September 3rd, 2023. 
+```{r}
+sept_3_weather_data <- weather_data %>%
+  mutate(Date = as.Date(last_updated, format = "%Y-%m-%d")) %>% 
+  filter(Date == as.Date("2023-09-03")) 
+sept_3_weather_data <- sept_3_weather_data %>%
+  select(country, location_name, temperature_fahrenheit, feels_like_fahrenheit, precip_in, cloud, humidity, wind_mph, last_updated)
+
+head(sept_3_weather_data)
+```
+
+After that, I was curious and wanted to answer the following question: Which location experienced the highest, and lowest temperature on September 3rd, 2023?
+
+Here is the (further) tidied information which we would need to answer that question:
+
+```{r}
+sept_3_weather_data_temp <- sept_3_weather_data %>%
+  select(country, location_name, temperature_fahrenheit, last_updated)
+
+head(sept_3_weather_data_temp)
+```
+And here is how I found the highest and lowest temperature globally on this date:
+
+```{r}
+row_with_lowest_temp <- which.min(sept_3_weather_data_temp$temperature_fahrenheit)
+lowest_temp_location <- sept_3_weather_data_temp$location_name[row_with_lowest_temp]
+lowest_temp_country <- sept_3_weather_data_temp$country[row_with_lowest_temp]
+lowest_temp_value <- sept_3_weather_data_temp$temperature_fahrenheit[row_with_lowest_temp]
+row_with_highest_temp <- which.max(sept_3_weather_data_temp$temperature_fahrenheit)
+highest_temp_location <- sept_3_weather_data_temp$location_name[row_with_highest_temp]
+highest_temp_country <- sept_3_weather_data_temp$country[row_with_highest_temp]
+highest_temp_value <- sept_3_weather_data_temp$temperature_fahrenheit[row_with_highest_temp]
+
+cat("Location with the lowest temperature:", lowest_temp_location, "\n")
+cat("Country:", lowest_temp_country, "\n")
+cat("Temperature:", lowest_temp_value, "°F\n\n")
+
+cat("Location with the highest temperature:", highest_temp_location, "\n")
+cat("Country:", highest_temp_country, "\n")
+cat("Temperature:", highest_temp_value, "°F\n")
+```
+
+Here we can see that the lowest temperature globally recorded was in Andorra La Vell, Andorra, with a temperature of 45 °F, whereas the highest temperature was found in Carreria, Paraguay, with a temperature of 99.1 °F!
+
+## DATA SET 2 - Hotel Bookings
+
+This dataset contains information which compares booking information between a city hotel and a resort hotel.
+
+```{r}
+rawlink_hotel <- 'https://raw.githubusercontent.com/rkasa01/DATA607_Project2_Data/main/hotel_bookings.csv'
+hotel_data <- read.csv(rawlink_hotel)
+head(hotel_data)
+```
+
+
+When I was looking at this dataset, a question popped into my mind! I wanted to know what was the highest and lowest average daily rate. 
+
+To answer this question, I removed any cancelled reservations and I first tidied the data a bit like so:
+
+```{r}
+adr_hotel_data <- hotel_data %>%
+  filter(is_canceled > 0) %>%
+  select(country, hotel, babies, children, adults, adr)
+
+head(adr_hotel_data)
+```
+
+```{r}
+highest_adr <- adr_hotel_data %>%
+  summarize(highest_adr = max(adr, na.rm = TRUE))
+lowest_adr <- adr_hotel_data %>%
+  summarize(lowest_adr = min(adr, na.rm = TRUE))
+
+print(highest_adr)
+
+print(lowest_adr)
+```
+
+It looks like the highest average daily rate was $5400 and the lowest was $0 -- both of which are drastically different rates!
+
+
+## DATA SET 3 - Airbnb Property Rentals
+```{r}
+rawlink_airbnb_loc <- 'https://raw.githubusercontent.com/rkasa01/DATA607_Project2_Data/main/airbnb_location_info.csv'
+rawlink_airbnb_price<-'https://raw.githubusercontent.com/rkasa01/DATA607_Project2_Data/main/airbnb_listing_price.csv'
+hotel_prop_data<-read_csv('airbnb_property_info.csv')
+hotel_loc_data <- read.csv(rawlink_airbnb_loc)
+hotel_price_data <- read.csv(rawlink_airbnb_price)
+head(hotel_loc_data)
+head(hotel_price_data)
+head(hotel_prop_data)
+```
+
+First, I started out by combining the three datasets, since they are related to one another. It is convenient, in this case, to look at the datasets combined since we are looking at airbnb properties. This way, we can see listing ID and price, relative to the rooms, location, neighbourhood, and the duration of the stay. I can now tidy and transform this dataset!
+```{r}
+combined_hotel_data <- inner_join(hotel_loc_data, hotel_price_data, by = "listing_id")
+combined_hotel_data <- inner_join(combined_hotel_data, hotel_prop_data, by = "listing_id")
+head(combined_hotel_data)
+```
+I wanted to tidy this data further and look at the listing_id, host location, price, bedrooms,minimum nights stay, and amenities.
+
+```{r}
+tidied_hotel_data <- combined_hotel_data %>%
+  select(listing_id, host_location, price, bedrooms, minimum_nights, amenities)
+
+head(tidied_hotel_data)
+```
+
+For this dataset, I wanted to have some fun and decided to assume that I was planning a trip to Paris, France. I am looking for an affordable property with 1 bedroom and Wifi. Ideally, I would like to spend as little as possible, so I would like to see what is available for $65 or less. Additionally, I would like to book the property for a maximum of 14 days, meaning that I cannot book a room for more than a minimum of 13 nights. 
+
+```{r}
+print(tidied_hotel_data)
+affordable_properties_paris <- tidied_hotel_data %>%
+  filter(
+    host_location == "Paris, Ile-de-France, France",
+    price <= 65,
+    bedrooms == 1,
+    grepl("Wifi", amenities, ignore.case = TRUE), 
+    minimum_nights <= 13,
+  )
+
+head(affordable_properties_paris)
+```
+
+Wow, there are so many options to choose from! I would like to see the most affordable property. 
+
+```{r}
+affordable_properties_sorted <- affordable_properties_paris %>%
+  arrange(price)
+most_affordable_property <- affordable_properties_sorted[1, ]
+
+print(most_affordable_property)
+```
+Well, it looks like I'm going to Paris, France! I will be staying there for 14 days, or 13 nights, for $8 a night. I will have 1 bedroom, and Wifi is included!
